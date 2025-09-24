@@ -21,7 +21,7 @@ app.get('/api/info', (req, res) => {
   res.json({
     app: 'Express Backend',
     environment: ENV,
-    version: '1.0.0'
+    version: '1.0.1'
   });
 });
 

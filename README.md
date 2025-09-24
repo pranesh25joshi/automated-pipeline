@@ -12,13 +12,21 @@ A multi-stage GitHub Actions workflow to automate deployments across separate De
 - **Containerized Deployments:** Builds optimized Docker images for your application.
 - **Automated Health Checks:** Configured liveness and readiness probes to ensure self-healing.
 - **Rollback Support:** Automatic rollback on deployment failures to maintain high availability.
+- **API Documentation:** Interactive Swagger/OpenAPI documentation for all endpoints.
+- **Test Coverage:** Mocha tests with reporting for code quality assurance.
+- **Structured Logging:** Winston-based logging for better debugging and monitoring.
+- **Admin Dashboard:** Simple frontend UI to interact with the API and monitor health.
 
 ## Tech Stack
 
 - **CI/CD & Automation:** GitHub Actions  
 - **Containerization:** Docker  
 - **Orchestration:** Kubernetes (AKS)  
-- **Registry:** GitHub Container Registry (GHCR)
+- **Registry:** Docker Hub
+- **Backend Framework:** Express.js
+- **API Documentation:** Swagger/OpenAPI
+- **Logging:** Winston
+- **Testing:** Mocha & Supertest
 - **Monitoring:** Kubernetes liveness & readiness probes
 - **Version Control:** Git/GitHub
 
@@ -77,11 +85,36 @@ az aks get-credentials --resource-group my-k8s-group --name my-k8s-cluster
 kubectl create namespace dev
 kubectl create namespace staging
 kubectl create namespace prod
+
+# Create Docker Hub secrets in each namespace
+kubectl create secret docker-registry dockerhub-secret \
+  --namespace=dev \
+  --docker-server=docker.io \
+  --docker-username=<your-username> \
+  --docker-password=<your-password>
+
+kubectl create secret docker-registry dockerhub-secret \
+  --namespace=staging \
+  --docker-server=docker.io \
+  --docker-username=<your-username> \
+  --docker-password=<your-password>
+
+kubectl create secret docker-registry dockerhub-secret \
+  --namespace=prod \
+  --docker-server=docker.io \
+  --docker-username=<your-username> \
+  --docker-password=<your-password>
 ```
 
-### 2. GitHub Container Registry Setup
+### 2. Docker Hub Setup
 
-The GitHub Actions workflow is configured to use GitHub Container Registry (GHCR) automatically. No additional setup is needed besides enabling GHCR for your account/organization.
+The GitHub Actions workflow is configured to use Docker Hub. You need to:
+
+1. Create a Docker Hub account if you don't have one
+2. Create a repository for this project
+3. Set up repository secrets in GitHub:
+   - `DOCKER_USERNAME`: Your Docker Hub username
+   - `DOCKER_PASSWORD`: Your Docker Hub password or access token
 
 ### 3. GitHub Setup
 
@@ -92,6 +125,8 @@ The GitHub Actions workflow is configured to use GitHub Container Registry (GHCR
    - Add protection rules and approvals to the `staging` and `production` environments
 3. Add repository secrets:
    - `KUBE_CONFIG`: Your Kubernetes cluster configuration file (base64-encoded)
+   - `DOCKER_USERNAME`: Your Docker Hub username
+   - `DOCKER_PASSWORD`: Your Docker Hub password or access token
 
 ### 4. Configure and Run the Workflow
 
@@ -121,6 +156,13 @@ npm start
 npm run dev
 ```
 
+## Running Tests
+
+```bash
+# Run all tests
+npm test
+```
+
 ## Docker Build
 
 ```bash
@@ -130,5 +172,23 @@ docker build -t express-backend:local .
 # Run the container
 docker run -p 3000:3000 express-backend:local
 ```
+
+## Application Features
+
+### API Endpoints
+
+- **GET /health** - Health check endpoint with memory usage and uptime
+- **GET /api/info** - Application information endpoint
+- **POST /api/echo** - Echo service that returns the request body
+- **GET /api-docs** - Swagger API documentation
+
+### Dashboard
+
+The application includes a simple dashboard that allows you to:
+
+- View the health status and memory usage
+- See application information
+- Test the echo service
+- Access Swagger API documentation
 # Testing CI/CD pipeline
 # Updated for Docker Hub

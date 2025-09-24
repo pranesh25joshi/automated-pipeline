@@ -3,7 +3,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const ENV = process.env.NODE_ENV || 'development';
 
+// Middleware
 app.use(express.json());
+app.use(express.static('public'));
 
 // Basic health check endpoint
 app.get('/health', (req, res) => {

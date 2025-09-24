@@ -29,6 +29,15 @@ build/
 out/
 .DS_Store
 
+# Kubernetes config files
+kubeconfig
+kubeconfig.yaml
+kubeconfig.yml
+kubeconfig.txt
+*kubeconfig*
+.kube/
+*.kubeconfig
+
 # IDE files
 .idea/
 .vscode/

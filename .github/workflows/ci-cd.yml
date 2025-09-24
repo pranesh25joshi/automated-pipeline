@@ -1,0 +1,169 @@
+name: Multi-Environment CI/CD Pipeline
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+env:
+  # Update these with your values
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  PROJECT_NAME: express-backend
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.image-tag.outputs.image }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Set Image Tag
+        id: image-tag
+        run: |
+          echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.image-tag.outputs.image }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+  deploy-dev:
+    name: Deploy to Dev
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    environment:
+      name: development
+      url: ${{ steps.deploy.outputs.deployment-url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up kubeconfig
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+
+      - name: Deploy to Dev
+        id: deploy
+        uses: Azure/k8s-deploy@v4
+        with:
+          namespace: dev
+          manifests: |
+            k8s/dev/deployment.yaml
+            k8s/dev/service.yaml
+            k8s/dev/configmap.yaml
+          images: |
+            ${{ needs.build.outputs.image }}
+          # You can set a health check endpoint to verify deployment
+          # health-check: 'http://dev-app-url/health'
+          # health-check-timeout: '60s'
+
+      - name: Verify Deployment
+        run: |
+          kubectl get all -n dev
+          echo "Deployment to Dev environment successful!"
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.deployment-url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up kubeconfig
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+
+      - name: Deploy to Staging
+        id: deploy
+        uses: Azure/k8s-deploy@v4
+        with:
+          namespace: staging
+          manifests: |
+            k8s/staging/deployment.yaml
+            k8s/staging/service.yaml
+            k8s/staging/configmap.yaml
+          images: |
+            ${{ needs.build.outputs.image }}
+
+      - name: Verify Deployment
+        run: |
+          kubectl get all -n staging
+          echo "Deployment to Staging environment successful!"
+
+  deploy-prod:
+    name: Deploy to Production
+    needs: [build, deploy-staging]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.deployment-url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up kubeconfig
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+
+      - name: Deploy to Production
+        id: deploy
+        uses: Azure/k8s-deploy@v4
+        with:
+          namespace: prod
+          manifests: |
+            k8s/prod/deployment.yaml
+            k8s/prod/service.yaml
+            k8s/prod/configmap.yaml
+          images: |
+            ${{ needs.build.outputs.image }}
+
+      - name: Verify Deployment
+        run: |
+          kubectl get all -n prod
+          echo "Deployment to Production environment successful!"

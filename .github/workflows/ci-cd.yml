@@ -78,26 +78,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up kubeconfig
-        uses: azure/k8s-set-context@v3
-        with:
-          method: kubeconfig
-          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      # Create the kubeconfig file manually
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        
+      - name: Create kubeconfig file
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl config view --minify
 
       - name: Deploy to Dev
         id: deploy
-        uses: Azure/k8s-deploy@v4
-        with:
-          namespace: dev
-          manifests: |
-            k8s/dev/deployment.yaml
-            k8s/dev/service.yaml
-            k8s/dev/configmap.yaml
-          images: |
-            ${{ needs.build.outputs.image }}
-          # You can set a health check endpoint to verify deployment
-          # health-check: 'http://dev-app-url/health'
-          # health-check-timeout: '60s'
+        run: |
+          kubectl apply -f k8s/dev/configmap.yaml -n dev
+          kubectl apply -f k8s/dev/deployment.yaml -n dev
+          kubectl apply -f k8s/dev/service.yaml -n dev
+          kubectl set image deployment/express-backend express-backend=${{ needs.build.outputs.image }} -n dev
 
       - name: Verify Deployment
         run: |
@@ -117,23 +115,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up kubeconfig
-        uses: azure/k8s-set-context@v3
-        with:
-          method: kubeconfig
-          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      # Create the kubeconfig file manually
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        
+      - name: Create kubeconfig file
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl config view --minify
 
       - name: Deploy to Staging
         id: deploy
-        uses: Azure/k8s-deploy@v4
-        with:
-          namespace: staging
-          manifests: |
-            k8s/staging/deployment.yaml
-            k8s/staging/service.yaml
-            k8s/staging/configmap.yaml
-          images: |
-            ${{ needs.build.outputs.image }}
+        run: |
+          kubectl apply -f k8s/staging/configmap.yaml -n staging
+          kubectl apply -f k8s/staging/deployment.yaml -n staging
+          kubectl apply -f k8s/staging/service.yaml -n staging
+          kubectl set image deployment/express-backend express-backend=${{ needs.build.outputs.image }} -n staging
 
       - name: Verify Deployment
         run: |
@@ -153,23 +152,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up kubeconfig
-        uses: azure/k8s-set-context@v3
-        with:
-          method: kubeconfig
-          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      # Create the kubeconfig file manually
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        
+      - name: Create kubeconfig file
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl config view --minify
 
       - name: Deploy to Production
         id: deploy
-        uses: Azure/k8s-deploy@v4
-        with:
-          namespace: prod
-          manifests: |
-            k8s/prod/deployment.yaml
-            k8s/prod/service.yaml
-            k8s/prod/configmap.yaml
-          images: |
-            ${{ needs.build.outputs.image }}
+        run: |
+          kubectl apply -f k8s/prod/configmap.yaml -n prod
+          kubectl apply -f k8s/prod/deployment.yaml -n prod
+          kubectl apply -f k8s/prod/service.yaml -n prod
+          kubectl set image deployment/express-backend express-backend=${{ needs.build.outputs.image }} -n prod
 
       - name: Verify Deployment
         run: |

@@ -17,6 +17,8 @@ spec:
         app: express-backend
         environment: production
     spec:
+      imagePullSecrets:
+      - name: dockerhub-secret
       containers:
       - name: express-backend
         image: docker.io/pranesh25joshi/automated-pipeline:latest
